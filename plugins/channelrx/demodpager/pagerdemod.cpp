@@ -177,23 +177,22 @@ bool PagerDemod::handleMessage(const Message& cmd)
         // Forward via UDP
         if (m_settings.m_udpEnabled)
         {
-            QByteArray message;
-            message.append(report.getDateTime().date().toString().toLatin1());
-            message.append('\0');
-            message.append(report.getDateTime().time().toString().toLatin1());
-            message.append('\0');
-            message.append(QString("%1").arg(report.getAddress(), 7, 10, QChar('0')).toLatin1());
-            message.append('\0');
-            message.append(QString::number(report.getFunctionBits()).toLatin1());
-            message.append('\0');
-            message.append(report.getAlphaMessage().toLatin1());
-            message.append('\0');
-            message.append(report.getNumericMessage().toLatin1());
-            message.append('\0');
-            m_udpSocket.writeDatagram(message.data(), message.size(),
+            QString formattedMsg;
+            // Build a Pipe-Delimited string
+            formattedMsg += report.getDateTime().date().toString() + "|";
+            formattedMsg += report.getDateTime().time().toString() + "|";
+            formattedMsg += QString("%1").arg(report.getAddress(), 7, 10, QChar('0')) + "|";
+            
+            // Use only the Alpha Message and trim trailing whitespace/junk
+            formattedMsg += report.getAlphaMessage().trimmed();
+            
+            // Add the Newline between messages
+            formattedMsg += "\n";
+
+            QByteArray datagram = formattedMsg.toUtf8();
+            m_udpSocket.writeDatagram(datagram.data(), datagram.size(),
                                 QHostAddress(m_settings.m_udpAddress), m_settings.m_udpPort);
         }
-
         // Write to log file
         if (m_logFile.isOpen())
         {
